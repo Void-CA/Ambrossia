@@ -18,10 +18,49 @@ type Product = {
 }
 
 const fetchProducts = async (): Promise<Product[]> => {
-  const res = await axios.get(
-    `${process.env.NEXT_PUBLIC_API_ROOT || 'http://localhost:8000'}/products/`
-  )
-  return res.data
+  // Productos de ejemplo para pruebas frontend
+  return [
+    {
+      id: 1,
+      name: "Hamburguesa Clásica",
+      description: "Carne 100% res, queso cheddar, lechuga y tomate.",
+      price: 120,
+      image: "/demo/hamburguesa.jpg",
+      category: "main-dishes",
+    },
+    {
+      id: 2,
+      name: "Papas Fritas",
+      description: "Porción grande de papas crujientes.",
+      price: 45,
+      image: "/demo/papas.jpg",
+      category: "appetizers",
+    },
+    {
+      id: 3,
+      name: "Brownie con Helado",
+      description: "Brownie de chocolate con bola de helado de vainilla.",
+      price: 60,
+      image: "/demo/brownie.jpg",
+      category: "desserts",
+    },
+    {
+      id: 4,
+      name: "Limonada Natural",
+      description: "Refrescante limonada hecha al momento.",
+      price: 30,
+      image: "/demo/limonada.jpg",
+      category: "drinks",
+    },
+    {
+      id: 5,
+      name: "Pizza Margarita",
+      description: "Salsa de tomate, mozzarella y albahaca fresca.",
+      price: 150,
+      image: "/demo/pizza.jpg",
+      category: "main-dishes",
+    },
+  ];
 }
 
 export default function InteractiveMenu({

@@ -17,9 +17,10 @@ export default function CreateOrderPage() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState('');
-  const [category, setCategory] = useState<string>('');
+  const [category, setCategory] = useState<string>('all');
   const [orderItems, setOrderItems] = useState<any[]>([]);
   const [showSent, setShowSent] = useState(false);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
   const createOrderMutation = createOrder();
@@ -28,23 +29,44 @@ export default function CreateOrderPage() {
     setSelectedProduct(product);
     setQuantity(1);
     setNote('');
+    setEditIdx(null);
+    setShowPopup(true);
+  };
+
+  const handleEditItem = (idx: number) => {
+    const item = orderItems[idx];
+    setSelectedProduct(item.product);
+    setQuantity(item.quantity);
+    setNote(item.note);
+    setEditIdx(idx);
     setShowPopup(true);
   };
 
   const handleAddToList = () => {
     if (!selectedProduct) return;
-    setOrderItems([
-      ...orderItems,
-      {
-        product: selectedProduct,
-        quantity,
-        note,
-      },
-    ]);
+    if (editIdx !== null) {
+      const updated = [...orderItems];
+      updated[editIdx] = { product: selectedProduct, quantity, note };
+      setOrderItems(updated);
+    } else {
+      setOrderItems([
+        ...orderItems,
+        {
+          product: selectedProduct,
+          quantity,
+          note,
+        },
+      ]);
+    }
     setShowPopup(false);
     setSelectedProduct(null);
     setQuantity(1);
     setNote('');
+    setEditIdx(null);
+  };
+
+  const handleDeleteItem = (idx: number) => {
+    setOrderItems(orderItems.filter((_, i) => i !== idx));
   };
 
   const handleSendOrder = () => {
@@ -78,6 +100,7 @@ export default function CreateOrderPage() {
     setSelectedProduct(null);
     setQuantity(1);
     setNote('');
+    setEditIdx(null);
   };
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -111,8 +134,30 @@ export default function CreateOrderPage() {
           ) : (
             <ul className="divide-y divide-muted">
               {orderItems.map((item, idx) => (
-                <li key={idx} className="py-2 flex flex-col gap-1">
-                  <span className="font-medium text-foreground">{item.product.name} x{item.quantity}</span>
+                <li key={idx} className="py-2 flex flex-col gap-1 group">
+                  <span className="font-medium text-foreground flex justify-between items-center">
+                    {item.product.name} x{item.quantity}
+                    <span className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => handleEditItem(idx)}
+                        aria-label="Editar producto"
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-red-500"
+                        onClick={() => handleDeleteItem(idx)}
+                        aria-label="Eliminar producto"
+                      >
+                        Eliminar
+                      </Button>
+                    </span>
+                  </span>
                   {item.note && <span className="text-xs text-muted-foreground">Nota: {item.note}</span>}
                 </li>
               ))}
@@ -186,7 +231,7 @@ export default function CreateOrderPage() {
                 onClick={handleAddToList}
                 disabled={isSubmitting}
               >
-                Agregar
+                {editIdx !== null ? 'Guardar' : 'Agregar'}
               </Button>
             </div>
           </div>
