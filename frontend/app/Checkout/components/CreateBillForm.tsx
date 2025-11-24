@@ -19,7 +19,7 @@ export default function CreateBillForm() {
       className="mb-4 flex flex-wrap items-end gap-3 bg-muted/40 p-3 rounded border"
     >
       <div className="flex flex-col">
-        <label className="text-xs text-gray-600 mb-1">Table ID</label>
+        <label className="text-xs text-muted-foreground mb-1">Table ID</label>
         <input
           type="number"
           value={tableId}
@@ -31,7 +31,7 @@ export default function CreateBillForm() {
         />
       </div>
       <div className="flex flex-col">
-        <label className="text-xs text-gray-600 mb-1">Discount %</label>
+        <label className="text-xs text-muted-foreground mb-1">Discount %</label>
         <input
           type="number"
           value={discountPercent}
@@ -40,12 +40,7 @@ export default function CreateBillForm() {
           placeholder="0"
         />
       </div>
-      <Button
-        type="submit"
-        size="sm"
-        disabled={isPending || tableId === ""}
-        className="bg-sky-600 hover:bg-sky-700"
-      >
+      <Button type="submit" size="sm" disabled={isPending || tableId === ""}>
         {isPending ? "Creando..." : "Crear factura"}
       </Button>
     </form>
