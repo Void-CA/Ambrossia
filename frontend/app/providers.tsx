@@ -32,7 +32,11 @@ function useInitTheme(): Theme {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => useInitTheme());
+  const [theme, setTheme] = useState<Theme>("light");
+
+  useEffect(() => {
+    setTheme(useInitTheme());
+  }, []);
 
   // Apply theme class & persist
   useEffect(() => {
