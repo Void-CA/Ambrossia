@@ -30,7 +30,7 @@ export default function BillDetail({ bill }: BillDetailProps) {
   const total = bill.total ?? 0;
 
   return (
-    <Card className="border shadow-sm">
+    <Card className="border shadow-sm rounded pb-2">
       <CardHeader className="py-2">
         <CardTitle className="text-base">Factura #{bill.id}</CardTitle>
       </CardHeader>
