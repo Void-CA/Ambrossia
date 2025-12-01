@@ -1,5 +1,9 @@
 export type TableStatus =
   | "available"
+  | "Available"
+  | "Occupied"
+  | "Reserved"
+  | "In_Cleaning"
   | "occupied"
   | "reserved"
   | "in_cleaning";

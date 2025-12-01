@@ -15,7 +15,7 @@ class table(models.Model):
 class order(models.Model):
 
     STATUS_CHOICES = [
-        ('notCooking','notCooking'),
+        ('notCooking','NotCooking'),
         ('cooking', 'Cooking'),
         ('ready', 'Ready'),
     ]

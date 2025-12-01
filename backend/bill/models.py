@@ -14,7 +14,7 @@ class bill(models.Model):
     paymentMethod = models.CharField(max_length=20)
     cashier = models.CharField(max_length=200)
 
-    # Los siguientes campos no habian sido considerados, mal ahi por el mae qeu hizo los diagramas
+    # Los siguientes campos no habian sido considerados, mal ahi por el mae que hizo los diagramas
 
     IVA = models.FloatField()
     discount = models.FloatField()

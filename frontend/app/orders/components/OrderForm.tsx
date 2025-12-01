@@ -67,3 +67,6 @@ export function OrderForm({
     </div>
   );
 }
+
+
+export default OrderForm;

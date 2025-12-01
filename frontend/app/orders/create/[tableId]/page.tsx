@@ -1,207 +1,147 @@
-'use client';
+"use client";
 
-import { useParams, useRouter } from 'next/navigation';
-import { createOrder } from '@/hooks/api/useOrders';
-import { useState, useRef } from 'react';
-import { toast } from 'sonner';
-import InteractiveMenu from '@/app/orders/components/InteractiveMenu';
-import { ProductCategorySelector } from '@/app/orders/components/OrderForm';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { Order } from "@/types/models/orders";
+import { Product } from "@/types/models/products";
+import { getOrdersByTable, createOrder, getProducts } from "@/services/orderService";
+
+// --- MOCKS ---
+const mockProducts: Product[] = [
+  { id: 1, name: "Pizza", price: 10, categoryId: 1 },
+  { id: 2, name: "Hamburguesa", price: 8, categoryId: 1 },
+  { id: 3, name: "Ensalada", price: 6, categoryId: 2 },
+];
+
+const mockOrders: Order[] = [
+  {
+    id: 1,
+    table: 1,
+    product: 2,
+    quantity: 2,
+    bill: null,
+    status: "notCooking",
+    created_at: "2024-06-01T12:00:00Z",
+    closed_at: null,
+    updated_at: null,
+    note: "Sin sal",
+    waiter: 1,
+  },
+  {
+    id: 2,
+    table: 1,
+    product: 3,
+    quantity: 1,
+    bill: null,
+    status: "cooking",
+    created_at: "2024-06-01T12:05:00Z",
+    closed_at: null,
+    updated_at: null,
+    note: null,
+    waiter: 2,
+  },
+];
+
+const useMock = false; // Cambia a true para usar mocks
 
 export default function CreateOrderPage() {
   const router = useRouter();
   const params = useParams();
-  const tableId = Array.isArray(params.tableId) ? params.tableId[0] : params.tableId;
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPopup, setShowPopup] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [note, setNote] = useState('');
-  const [category, setCategory] = useState<string>('');
-  const [orderItems, setOrderItems] = useState<any[]>([]);
-  const [showSent, setShowSent] = useState(false);
-  const popupRef = useRef<HTMLDivElement>(null);
+  const tableId = Number(params.tableId);
 
-  const createOrderMutation = createOrder();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<number>(1);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [note, setNote] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
-  const handleAddProduct = (product: any) => {
-    setSelectedProduct(product);
-    setQuantity(1);
-    setNote('');
-    setShowPopup(true);
-  };
+  useEffect(() => {
+    if (useMock) {
+      setOrders(mockOrders.filter(o => o.table === tableId));
+      setProducts(mockProducts);
+      setLoading(false);
+    } else {
+      Promise.all([
+        getOrdersByTable(tableId),
+        getProducts()
+      ]).then(([ordersData, productsData]) => {
+        setOrders(ordersData);
+        setProducts(productsData);
+        setLoading(false);
+      });
+    }
+  }, [tableId]);
 
-  const handleAddToList = () => {
-    if (!selectedProduct) return;
-    setOrderItems([
-      ...orderItems,
-      {
+  const handleCreateOrder = async () => {
+    if (useMock) {
+      const newOrder: Order = {
+        id: orders.length + 1,
+        table: tableId,
+        product: selectedProduct,
+        quantity,
+        bill: null,
+        status: "notCooking",
+        created_at: new Date().toISOString(),
+        closed_at: null,
+        updated_at: null,
+        note,
+        waiter: 1,
+      };
+      setOrders([...orders, newOrder]);
+    } else {
+      await createOrder({
+        table: tableId,
         product: selectedProduct,
         quantity,
         note,
-      },
-    ]);
-    setShowPopup(false);
-    setSelectedProduct(null);
-    setQuantity(1);
-    setNote('');
-  };
-
-  const handleSendOrder = () => {
-    if (!tableId || orderItems.length === 0) return;
-    setIsSubmitting(true);
-
-    Promise.all(
-      orderItems.map(item =>
-        createOrderMutation.mutateAsync({
-          table: parseInt(tableId as string),
-          product: item.product.id,
-          quantity: item.quantity,
-          note: item.note,
-          status: 'notCooking',
-        })
-      )
-    )
-      .then(() => {
-        setIsSubmitting(false);
-        setOrderItems([]);
-        setShowSent(true);
-      })
-      .catch(() => {
-        toast.error('Error al enviar la orden');
-        setIsSubmitting(false);
       });
-  };
-
-  const handleCancelPopup = () => {
-    setShowPopup(false);
-    setSelectedProduct(null);
-    setQuantity(1);
-    setNote('');
-  };
-
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-      handleCancelPopup();
+      const updatedOrders = await getOrdersByTable(tableId);
+      setOrders(updatedOrders);
     }
+    setQuantity(1);
+    setNote("");
   };
 
-  const handleContinue = () => {
-    setShowSent(false);
-  };
-
-  if (!tableId) {
-    return <div className="text-center py-10 text-lg text-gray-600">Mesa no seleccionada</div>;
-  }
+  if (loading) return <div>Cargando órdenes...</div>;
 
   return (
-    <div className="relative flex flex-col gap-8">
-      <h1 className="text-2xl font-bold mb-4 text-foreground">Toma de Orden - Mesa {tableId}</h1>
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="flex-1">
-          <div className="mb-4">
-            <ProductCategorySelector category={category} setCategory={setCategory} />
-          </div>
-          <InteractiveMenu onAdd={handleAddProduct} category={category} />
-        </div>
-        <div className="w-full md:w-96 bg-background rounded-xl shadow p-4 flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-foreground">Orden actual</h2>
-          {orderItems.length === 0 ? (
-            <div className="text-gray-500 text-sm">No hay productos agregados.</div>
-          ) : (
-            <ul className="divide-y divide-muted">
-              {orderItems.map((item, idx) => (
-                <li key={idx} className="py-2 flex flex-col gap-1">
-                  <span className="font-medium text-foreground">{item.product.name} x{item.quantity}</span>
-                  {item.note && <span className="text-xs text-muted-foreground">Nota: {item.note}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-          <Button
-            className="w-full bg-sky-600 hover:bg-sky-700 text-white"
-            onClick={handleSendOrder}
-            disabled={isSubmitting || orderItems.length === 0}
-          >
-            {isSubmitting ? 'Enviando...' : 'Enviar a cocina'}
-          </Button>
-        </div>
+    <div>
+      <h1>Órdenes para la mesa {tableId}</h1>
+      <div>
+        <select value={selectedProduct} onChange={e => setSelectedProduct(Number(e.target.value))}>
+          {products.map(product => (
+            <option key={product.id} value={product.id}>{product.name} (${product.price})</option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={1}
+          value={quantity}
+          onChange={e => setQuantity(Number(e.target.value))}
+        />
+        <input
+          type="text"
+          placeholder="Nota"
+          value={note}
+          onChange={e => setNote(e.target.value)}
+        />
+        <button onClick={handleCreateOrder}>Agregar orden</button>
       </div>
-      {showPopup && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40"
-          onClick={handleOverlayClick}
-        >
-          <div
-            ref={popupRef}
-            className="bg-background rounded-lg shadow-lg p-6 min-w-[320px] flex flex-col gap-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex flex-col gap-2">
-              <div className="font-semibold text-lg text-foreground">{selectedProduct?.name}</div>
-              <label className="text-sm font-medium text-foreground">Cantidad</label>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="px-2 py-1"
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  disabled={quantity <= 1}
-                >
-                  -
-                </Button>
-                <span className="px-4">{quantity}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="px-2 py-1"
-                  onClick={() => setQuantity(q => q + 1)}
-                >
-                  +
-                </Button>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-foreground">Notas</label>
-              <textarea
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                className="border rounded px-2 py-1 min-h-[60px] resize-none bg-background text-foreground"
-                placeholder="Agregar notas para cocina (opcional)"
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                className="px-4 py-2"
-                onClick={handleCancelPopup}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                className="px-4 py-2 bg-sky-600 text-white hover:bg-sky-700"
-                onClick={handleAddToList}
-                disabled={isSubmitting}
-              >
-                Agregar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showSent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-background rounded-lg shadow-lg p-8 flex flex-col items-center gap-4">
-            <span className="text-xl font-semibold text-foreground">¡Orden enviada a cocina!</span>
-            <Button className="bg-sky-600 text-white hover:bg-sky-700" onClick={handleContinue}>
-              Continuar
-            </Button>
-          </div>
-        </div>
-      )}
+      <ul>
+        {orders.map(order => (
+          <li key={order.id}>
+            Producto: {
+              typeof order.product === "number"
+                ? products.find(p => p.id === order.product)?.name || order.product
+                : typeof order.product === "string"
+                  ? order.product
+                  : (order.product as Product).name
+            }, Cantidad: {order.quantity}, Estado: {order.status}, Nota: {order.note}
+          </li>
+        ))}
+      </ul>
+      <button onClick={() => router.push("/tables")}>Volver a mesas</button>
     </div>
   );
 }
