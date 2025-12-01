@@ -12,6 +12,7 @@ from .models import bill
 from .serializers import billSerializer
 from tables.models import order, orderItem
 
+from cashRegister.models import CashMovement, BillsQuantity, CashRegister
 
 class BillViewSet(viewsets.ModelViewSet):
     """
@@ -94,7 +95,7 @@ class BillViewSet(viewsets.ModelViewSet):
                 })
             
             # Asociar orden a la factura
-            ord.billId = bill_obj
+            ord.billId = bill_obj # type: ignore
             ord.save()
         
         # Calcular IVA (15%)
@@ -123,7 +124,6 @@ class BillViewSet(viewsets.ModelViewSet):
             with open(pdf_path, "wb") as f:
                 f.write(pdf_buffer.getvalue())
         except Exception as e:
-            # Si falla la generación del PDF, continuar sin él
             pass
 
         serializer = billSerializer(bill_obj)
@@ -172,22 +172,43 @@ class BillViewSet(viewsets.ModelViewSet):
         """
         bill_obj = self.get_object()
         new_status = request.data.get('status')
+        payment = request.data.get('payment')
+        change = request.data.get('change')
         
         if new_status not in ['notPayed', 'payed']:
             return Response(
                 {'error': 'Status inválido'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        if payment < bill_obj.total:
+            return Response(
+                {'error': 'Can not pay with less than the total amount'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         bill_obj.status = new_status
         
         if new_status == 'payed':
             bill_obj.closedAt = timezone.now()
-            # Actualizar el monto pagado si se proporciona
-            paid_amount = request.data.get('paidAmount')
-            if paid_amount:
-                bill_obj.paidAmount = float(paid_amount)
-        
+            paid_amount = bill_obj.paidAmount
+
+        total = bill_obj.total
+        method_used = bill_obj.paymentMethod
+        cash_register_id = request.data.get('cashRegisterId')
+        cash_register = CashRegister.objects.get(pk=cash_register_id)
+
+        movement = CashMovement.objects.create(cash_inflow = payment, cash_outflow = change,
+                                               amount = total, method = method_used, denominations = {},
+                                               cashierId = bill_obj.cashier, cashRegisterNumber = cash_register)
+
+        out_flow_bills = request.data["bills"]
+        for i in out_flow_bills:
+            new_bill = get_object_or_404(BillsQuantity, cash_register=cash_register_id,
+                                         denomination=i["denomination"])
+            new_bill.quantity -= i["quantity"]
+            new_bill.save()
+
         bill_obj.save()
         serializer = billSerializer(bill_obj)
         return Response(serializer.data)

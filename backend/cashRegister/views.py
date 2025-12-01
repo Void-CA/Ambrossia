@@ -3,18 +3,28 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from .models import cashRegister
-from .serializers import CashRegisterSerializer
+from .models import CashRegister, CashMovement, BillsQuantity
+from bill.models import bill
+from .serializers import CashRegisterSerializer, CashMovementSerializer, BillsQuantitySerializer, ChangeOutputSerializer
+# from users.permissions import IsAdmin, IsCaja
 
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
 
 class CashRegisterViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gestionar cajas registradoras.
     """
-    queryset = cashRegister.objects.all()
+    queryset = CashRegister.objects.all()
     serializer_class = CashRegisterSerializer
 
-    @action(detail=False, methods=['post'])
+    # def get_permissions(self):
+    #     if self.action in ['open_register', 'close_register']:
+    #         return [IsCaja()]
+    #     return [IsAdmin()]
+
+    @action(detail=False, methods=['put'])
     def open_register(self, request):
         """
         Abrir una nueva caja registradora.
@@ -29,21 +39,22 @@ class CashRegisterViewSet(viewsets.ModelViewSet):
             )
 
         # Verificar que no haya una caja abierta para este cajero
-        open_registers = cashRegister.objects.filter(
+        open_registers = CashRegister.objects.filter(
             cashierId=cashier_id, 
             status='open'
         )
-        
+
         if open_registers.exists():
             return Response(
                 {'error': 'Ya existe una caja abierta para este cajero'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        register = cashRegister.objects.create(
-            cashierId=cashier_id,
-            status='open'
-        )
+        register = get_object_or_404(CashRegister, cashierId = cashier_id)
+
+        register.status = 'open'
+        register.opened_at = timezone.now()
+        register.save()
         
         serializer = CashRegisterSerializer(register)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -62,8 +73,19 @@ class CashRegisterViewSet(viewsets.ModelViewSet):
             )
         
         register.status = 'closed'
-        register.closedAt = timezone.now()
+        register.closed_at = timezone.now()
         register.save()
+
+        try:
+
+            pdf_buffer =  generate_daily_report(date = register.closed_at, register_id= register.id)
+            pdf_path = f"cashMovements/movements_{register.closed_at.date()}.pdf"
+
+            with open(pdf_path, "wb") as f:
+                f.write(pdf_buffer.getvalue())
+        
+        except Exception as e:
+            return Response ({'error':str(e)},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         serializer = CashRegisterSerializer(register)
         return Response(serializer.data)
@@ -73,7 +95,7 @@ class CashRegisterViewSet(viewsets.ModelViewSet):
         """
         Obtener todas las cajas registradoras abiertas.
         """
-        open_registers = cashRegister.objects.filter(status='open')
+        open_registers = CashRegister.objects.filter(status='open')
         serializer = CashRegisterSerializer(open_registers, many=True)
         return Response(serializer.data)
 
@@ -82,6 +104,118 @@ class CashRegisterViewSet(viewsets.ModelViewSet):
         """
         Obtener todas las cajas registradoras cerradas.
         """
-        closed_registers = cashRegister.objects.filter(status='closed')
+        closed_registers = CashRegister.objects.filter(status='closed')
         serializer = CashRegisterSerializer(closed_registers, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data)     
+    
+class CashMovementViewSet(viewsets.ModelViewSet):
+    queryset = CashMovement.objects.all()
+    serializer_class = CashMovementSerializer
+
+    # def get_permissions(self):
+    #     if self.action == 'create':
+    #         return [IsCaja()]
+    #     if self.action in ['update', 'partial_update', 'destroy']:
+    #         return [IsAdmin()]
+    #     return super().get_permissions()
+
+class BillsQuantityViewSet(viewsets.ModelViewSet):
+    queryset = BillsQuantity.objects.all()
+    serializer_class = BillsQuantitySerializer
+
+    # def get_permissions(self):
+    #     if self.action == 'create':
+    #         return [IsCaja()]
+    #     if self.action in ['update', 'partial_update', 'destroy']:
+    #         return [IsAdmin()]
+    #     return super().get_permissions()
+    
+def generate_daily_report(date, register_id):
+
+    movements = CashMovement.objects.filter(created_at__date = date.date(), cashRegisterNumber = register_id)
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    # Título
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(100, height - 50, f"Reporte Diario Caja {register_id} - {date.date()}")
+
+    # Encabezados
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, height - 80, "ID")
+    p.drawString(120, height - 80, "Método")
+    p.drawString(220, height - 80, "Monto")
+    p.drawString(320, height - 80, "Fecha")
+
+    # Listar movimientos
+    y = height - 100
+    p.setFont("Helvetica", 10)
+    for m in movements:
+        p.drawString(50, y, str(m.pk))
+        p.drawString(120, y, str(m.method))
+        p.drawString(220, y, f"${m.amount:.2f}")
+        p.drawString(320, y, m.created_at.strftime("%Y-%m-%d %H:%M"))
+        y -= 20
+        if y < 50:
+            p.showPage()
+            y = height - 50
+    
+    p.save()
+    buffer.seek(0)
+    return buffer
+
+class BillsQuantityViewSet(viewsets.ModelViewSet):
+    queryset = BillsQuantity.objects.all()
+    serializer_class = BillsQuantitySerializer
+
+    @action(detail = False, methods = ['post'])
+    def get_change (self, request):
+        payment = request.data['payment']
+        bill_id = request.data['bill_id']
+
+        temp = bill.objects.get(id = bill_id)
+        amount = temp.total
+
+        change = payment - amount
+
+        print(f"payment: {payment}" )
+        print(f"amount: {amount}" )
+        print(f"change: {change}" )
+
+        cash_register_id = request.data['cash_register_id']
+        bills = amount_to_bills(change, cash_register_id)
+
+        if bills == 0:
+            return Response ({'error':'No bills'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = ChangeOutputSerializer(bills, many=True)
+
+        return Response({'change': change, 'bills': serializer.data})
+
+def amount_to_bills(amount, cash_register_id):
+
+    bills = []
+
+    bills_available = BillsQuantity.objects.order_by('-denomination').filter(cash_register = cash_register_id)
+
+    for i in bills_available:
+        bills_count = 0
+        if i.denomination > amount or i.quantity < 0:
+            continue
+        else:
+            while i.quantity > 0:
+                if amount < i.denomination:
+                    break
+                amount -= i.denomination
+                bills_count += 1
+                i.quantity -= 1
+        bills.append ({'denomination': i.denomination, 'quantity': bills_count})
+
+        print(bills)
+
+    if amount == 0:
+        return bills
+    else:
+        return 0
