@@ -25,14 +25,14 @@ export default function BillList({ onSelect, selectedId }: BillListProps) {
       {bills.map((b) => (
         <Card
           key={b.id}
-          className={`border shadow-sm transition hover:shadow-md cursor-pointer ${
+          className={`border shadow-sm transition hover:shadow-md cursor-pointer rounded pb-2 ${
             selectedId === b.id ? "ring-2 ring-sky-500" : ""
           }`}
           onClick={() => onSelect(b)}
         >
           <CardHeader className="py-2">
             <CardTitle className="text-sm font-semibold flex justify-between">
-              <span>Bill #{b.id}</span>
+              <span>Factura #{b.id}</span>
               <span className="text-xs font-normal text-gray-500">
                 {new Date(b.created_at).toLocaleTimeString([], {
                   hour: "2-digit",
