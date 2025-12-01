@@ -12,7 +12,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold">Checkout</h1>
+      <h1 className="text-2xl font-bold">Caja</h1>
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1">
           <h2 className="text-lg font-semibold mb-3">Facturas abiertas</h2>

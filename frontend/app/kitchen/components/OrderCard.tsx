@@ -34,28 +34,26 @@ export default function OrderCard({
   items,
 }: OrderCardProps) {
   return (
-    <Card className="w-64 border border-gray-700 shadow-black bg-gray-800 py-0 rounded-xl">
-      <CardHeader className="bg-sky-100 py-2 px-3 rounded-t-xl">
-        <CardTitle className="text-base font-semibold text-gray-900">
-          Table {table}
+    <Card className="w-64 rounded-xl border border-border bg-background shadow-sm">
+      <CardHeader className="py-2 px-3 rounded-t-xl bg-muted">
+        <CardTitle className="text-base font-semibold text-foreground">
+          Mesa {table}
         </CardTitle>
-
-        <div className="text-sm text-gray-500 flex justify-between">
-          <span className="text-gray-700">{formatTime(time)}</span>
+        <div className="text-sm flex justify-between text-muted-foreground">
+          <span>{formatTime(time)}</span>
           <p>{waiter ?? "-"}</p>
         </div>
       </CardHeader>
-
-      <CardContent className="px-3 pb-7">
+      <CardContent className="px-3 pb-5">
         {items.map((item, idx) => (
           <div key={idx} className={idx === 0 ? "" : "mt-3"}>
             <div className="flex justify-between items-center">
-              <span className="font-medium">
+              <span className="font-medium text-foreground">
                 {item.quantity} {item.productName}
               </span>
             </div>
             {item.note ? (
-              <div className="ml-4 text-sm text-amber-100">
+              <div className="ml-4 mt-1 text-xs italic text-muted-foreground">
                 <p>{item.note}</p>
               </div>
             ) : null}

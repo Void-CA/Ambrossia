@@ -18,10 +18,50 @@ type Product = {
 }
 
 const fetchProducts = async (): Promise<Product[]> => {
-  const res = await axios.get(
-    `${process.env.NEXT_PUBLIC_API_ROOT || 'http://localhost:8000'}/products/`
-  )
-  return res.data
+  // Productos de ejemplo para pruebas frontend
+  return [
+    {
+      id: 1,
+      name: "Hamburguesa Clásica",
+      description: "Carne 100% res, queso cheddar, lechuga y tomate.",
+      price: 120,
+      image: "/hamburguesa.jpg",
+      category: "main-dishes",
+    },
+    {
+      id: 2,
+      name: "Lasagna",
+      description: "Capas de pasta, carne molida, salsa de tomate y queso gratinado.",
+      price: 45,
+      image: "/Lasagna.jpg",
+      category: "appetizers",
+    },
+    {
+      id: 3,
+      name: "Jugo de Slurp",
+      description: "Mezcla refrescante de frutas tropicales.",
+      price: 60,
+      image: "/Slurp.jpg",
+      category: "desserts",
+    },
+    {
+      id: 4,
+      name: "Basilisco Asado",
+      description: "Jugosa pechuga de basilisco marinada y asada a la perfección.",
+      price: 30,
+      image: "/Roast_Basilisk.png",
+      category: "main-dishes",
+    },
+    {
+      id: 5,
+      name: "Bebidas Energéticas Max",
+      description: "Bebida energética para un impulso rápido de energía.",
+      price: 150,
+      image: "/max_energy_drink.jpg",
+      category: "main-dishes",
+    },
+  ];
+  
 }
 
 export default function InteractiveMenu({

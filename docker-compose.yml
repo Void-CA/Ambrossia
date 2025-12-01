@@ -21,6 +21,17 @@ services:
       - PYTHONUNBUFFERED=1
       - DJANGO_SETTINGS_MODULE=backend.settings
 
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./backend/staticfiles:/static
+    depends_on:
+      - backend
+
   db:
     image: postgres:16
     container_name: postgres_db
