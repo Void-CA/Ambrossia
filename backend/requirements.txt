@@ -1,4 +1,10 @@
 Django>=5.0
 djangorestframework
+django-cors-headers
 psycopg2-binary>=2.9
-python-dotenv
+daphne
+channels
+djangorestframework-simplejwt
+reportlab
+django-redis
+channels_redis
